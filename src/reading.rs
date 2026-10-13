@@ -1163,6 +1163,9 @@ pub mod async_api {
 
 				self.state = match ::std::mem::replace(&mut self.state, InUpdate) {
 					Head => {
+						if !consumed_buf.starts_with(b"OggS") {
+							return Err(OggReadError::NoCapturePatternFound);
+						}
 						let mut hdr_buf = [0; 27];
 						// TODO once we have const generics, the copy below can be done
 						// much nicer, maybe with a new into_array fn on Vec's
