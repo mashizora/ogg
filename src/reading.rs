@@ -339,6 +339,10 @@ impl PageParser {
 				tri!(Err(OggReadError::HashMismatch(self.checksum, hash_calculated)));
 			}
 		}
+		// A granule position of -1 means no packet ends on this page.
+		if self.bi.absgp == u64::MAX && self.packet_count > 0 {
+			return Err(OggReadError::InvalidData);
+		}
 		self.segments_or_packets_buf = packet_data;
 		Ok(OggPage(self))
 	}
