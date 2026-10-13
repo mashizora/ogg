@@ -474,7 +474,7 @@ impl BasePacketReader {
 		match self.page_infos.entry(pg_prs.stream_serial) {
 			Entry::Occupied(mut o) => {
 				let inf = o.get_mut();
-				if pg_prs.bi.first_page {
+				if pg_prs.bi.first_page || inf.bi.last_page {
 					tri!(Err(OggReadError::InvalidData));
 				}
 				// Check page sequence numbers before joining packet data.
