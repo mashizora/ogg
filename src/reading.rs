@@ -654,16 +654,13 @@ impl UntilPageHeaderReader {
 		}));
 
 		if rd_len == 0 {
-			// Reached EOF. This means we're in one of these cases:
-			// 1. If we have read nothing yet (self.read_amount == 0),
-			//    there is no data but ogg data, meaning the stream
-			//    ends legally and without corruption.
-			// 2. If we have read something, there is corruption here.
-			//    The ogg spec doesn't say whether random data past the
-			//    last ogg page is allowed, and ogginfo complains about
-			//    that. But files with trailing garbarge can be played
-			//    back just fine by oggdec, VLC and other players, so
-			//    just ignore that to meet user expectations.
+			if let FoundWithNeeded(_) = self.mode {
+				// Found "OggS", but the rest of the header is missing.
+				return Err(Error::new(ErrorKind::UnexpectedEof,
+					"Incomplete Ogg page header").into());
+			}
+
+			// No page start was found. Ignore any trailing bytes.
 			return Ok(Res::Eof);
 		}
 		self.read_amount += rd_len;
@@ -1191,8 +1188,16 @@ pub mod async_api {
 
 		fn decode_eof(&mut self, buf :&mut BytesMut) ->
 				Result<Option<OggPage>, OggReadError> {
-			// Ugly hack for "bytes remaining on stream" error
-			return self.decode(buf);
+			let page = tri!(self.decode(buf));
+			// Allow trailing bytes, but report an unfinished page.
+			if page.is_none() {
+				match self.state {
+					PageDecodeState::Head if !buf.starts_with(b"OggS") => (),
+					_ => return Err(Error::new(ErrorKind::UnexpectedEof,
+						"Incomplete Ogg page").into()),
+				}
+			}
+			Ok(page)
 		}
 	}
 
