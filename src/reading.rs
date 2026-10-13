@@ -473,6 +473,10 @@ impl BasePacketReader {
 				if pg_prs.bi.first_page {
 					tri!(Err(OggReadError::InvalidData));
 				}
+				// Check page sequence numbers before joining packet data.
+				if pg_prs.bi.sequence_num != inf.bi.sequence_num.wrapping_add(1) {
+					tri!(Err(OggReadError::InvalidData));
+				}
 				if pg_prs.bi.starts_with_continued != inf.bi.ends_with_continued {
 					if !self.has_seeked {
 						tri!(Err(OggReadError::InvalidData));
